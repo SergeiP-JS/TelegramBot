@@ -1,11 +1,12 @@
 # Бот для отслеживания курса валюты USD
 Данный бот способен отслежтвать USD валюту и отправлять вам уведомление при изменении $.
-+ С помощью меню вы можете подписаться/отписаться от рассылки,
+С помощью меню вы можете
++  подписаться/отписаться от рассылки,
 + узнать актуальный курс за день, неделю или месяц.
 
 # Установка
 Для данного бота требуется библиотеки:
-    + pip install requests
-    + pip install bs4
-    + pip install peewee
-    + pip install python-telegram-bot
++ pip install requests
++ pip install bs4
++ pip install peewee
++ pip install python-telegram-bot
