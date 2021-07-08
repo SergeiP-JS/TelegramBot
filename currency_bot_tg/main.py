@@ -82,7 +82,7 @@ def on_command_up(update: Update, context: CallbackContext):
 
     if not db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id):
             db.Subscription.create(chat_id=update.effective_chat.id, is_active='true', was_sending='false')
-            message.text = "Вы успешно подписались &#128521;"
+            message.text = "Вы успешно подписались &#128521; "
 
     message.reply_text(
         message.text,
