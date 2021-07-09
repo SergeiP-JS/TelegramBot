@@ -10,8 +10,8 @@ import time
 from threading import Thread
 
 # pip install python-telegram-bot
-from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup, Bot, ParseMode
-from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext,CallbackQueryHandler
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext
 from telegram.ext.dispatcher import run_async
 
 import db
@@ -23,102 +23,116 @@ from run_check_subscriptions import check_
 
 log = get_logger(__file__)
 
-COMMANDS = [['Последнее значение', 'За неделю', 'За месяц'],['Подписаться']]
-REPLY_KEYBOARD_MARKUP = ReplyKeyboardMarkup(COMMANDS, resize_keyboard=True)
+
+COMMAND_SUBSCRIBE = 'Подписаться'
+COMMAND_UNSUBSCRIBE = 'Отписаться'
+COMMAND_LAST = 'Последнее значение'
+COMMAND_LAST_BY_WEEK = 'За неделю'
+COMMAND_LAST_BY_MONTH = 'За месяц'
+
+
+def keyboard_(is_active):
+    if is_active:
+        COMMANDS = [[COMMAND_LAST, COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH], [COMMAND_UNSUBSCRIBE]]
+    else:
+        COMMANDS = [[COMMAND_LAST, COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH], [COMMAND_SUBSCRIBE]]
+
+    return ReplyKeyboardMarkup(COMMANDS, resize_keyboard=True)
 
 
 @run_async
 @log_func(log)
 def on_start(update: Update, context: CallbackContext):
-    update.message.reply_text(
+    user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
+    
+    update.effective_message.reply_html(
         f'Приветсвую {update.effective_user.first_name} 🙂\n'
         'Данный бот способен отслеживать USD валюту и отправлять вам уведомление при изменении 💲.\n'
         'С помощью меню вы можете подписаться/отписаться от рассылки, узнать актуальный курс за день, неделю или месяц.',
-        parse_mode=ParseMode.HTML,
-        reply_markup=REPLY_KEYBOARD_MARKUP
+        reply_markup=keyboard_(0 if not user else user.get().is_active)
     )
 
 
 @run_async
 @log_func(log)
-def on_reply_command(update: Update, context: CallbackContext):
-    message = update.message
-    message.reply_text(
-        'Reply command: ' + message.text,
-        reply_markup=REPLY_KEYBOARD_MARKUP
-    )
-
-
-@run_async
-@log_func(log)
-def on_command_up(update: Update, context: CallbackContext):
-    message = update.message
+def on_command_SUBSCRIBE(update: Update, context: CallbackContext):
+    message = update.effective_message
     # print(message.text)
 
-    for s in db.Subscription.select():
-        if s.chat_id == update.effective_chat.id:
-            if s.is_active and message.text=="Подписаться":
-                message.text = "Подписка уже оформлена 🤔"
-                COMMANDS[1][0] = "Отписаться"
-            else:
-                if s.is_active==False and message.text=="Отписаться":
-                    message.text = "Подписка не оформлена 🤔"
-                    COMMANDS[1][0] = "Подписаться"
-                else:
-                    if s.is_active and message.text == "Отписаться":
-                        s.is_active = 0
-                        s.save()
-                        s.was_sending = 0
-                        s.save()
-                        COMMANDS[1][0] = "Подписаться"
-                        message.text = "Вы успешно отписались 😔"
-                    else:
-                        if s.is_active == False and message.text == "Подписаться":
-                            s.is_active = 1
-                            s.save()
-                            s.modification_datetime = DT.datetime.now()
-                            s.save()
-                            COMMANDS[1][0] = "Отписаться"
-                            message.text = "Вы успешно подписались 😉"
-            break
+    user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
 
-    if not db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id):
+    if not user:
         db.Subscription.create(chat_id=update.effective_chat.id, is_active=1, was_sending=0)
-        COMMANDS[1][0] = "Отписаться"
         message.text = "Вы успешно подписались 😉"
+    else:
+        if user.get().is_active:
+            message.text = "Подписка уже оформлена 🤔"
+        else:
+            user_ = user.get()
+            user_.is_active = 1
+            user_.save()
+            user_.modification_datetime = DT.datetime.now()
+            user_.save()
 
-    message.reply_text(
+            message.text = "Вы успешно подписались 😉"
+
+    message.reply_html(
         message.text,
-        parse_mode=ParseMode.HTML,
-        reply_markup=ReplyKeyboardMarkup(COMMANDS, resize_keyboard=True)
+        reply_markup=keyboard_(user.get().is_active)
     )
 
 
 @run_async
 @log_func(log)
-def on_command_0(update: Update, context: CallbackContext):
-    if db.ExchangeRate.select().first():
-        message = update.message
+def on_command_UNSUBSCRIBE(update: Update, context: CallbackContext):
+    message = update.effective_message
+    # print(message.text)
 
-        message.reply_text(
-            f'Актуальный курс USD за <b><u>{db.ExchangeRate.get(db.ExchangeRate.id == db.ExchangeRate.select().count()).date}</u></b>: '
-            f'{db.ExchangeRate.get(db.ExchangeRate.id == db.ExchangeRate.select().count()).value}₽',
-            parse_mode=ParseMode.HTML,
-            reply_markup=ReplyKeyboardMarkup(COMMANDS, resize_keyboard=True)
+    user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
+
+    if not user:
+        message.text = "Подписка не оформлена 🤔"
+    else:
+        if user.get().is_active==0:
+            message.text = "Подписка не оформлена 🤔"
+        else:
+            user_ = user.get()
+            user_.is_active = 0
+            user_.save()
+            user_.was_sending = 0
+            user_.save()
+
+            message.text = "Вы успешно отписались 😔"
+
+    message.reply_html(
+        message.text,
+        reply_markup=keyboard_(user.get().is_active)
+    )
+
+
+@run_async
+@log_func(log)
+def on_command_LAST(update: Update, context: CallbackContext):
+    user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
+
+    if db.ExchangeRate.select().first():
+        exchange_rate=db.ExchangeRate.get(db.ExchangeRate.id == db.ExchangeRate.select().count())
+
+        update.effective_message.reply_html(
+            f'Актуальный курс USD за <b><u>{exchange_rate.date}</u></b>: '
+            f'{exchange_rate.value}₽',
+            reply_markup=keyboard_(0 if not user else user.get().is_active)
         )
     else:
-        message = update.message
-
-        message.reply_text(
+        update.effective_message.reply_html(
             'Бот ещё молодой и не имеет достаточно информации 😔',
-            parse_mode=ParseMode.HTML,
-            reply_markup=ReplyKeyboardMarkup(COMMANDS, resize_keyboard=True)
+            reply_markup=keyboard_(0 if not user else user.get().is_active)
         )
 
 
 @run_async
 @log_func(log)
-def on_command_1(update: Update, context: CallbackContext):
+def on_command_LAST_BY_WEEK(update: Update, context: CallbackContext):
     flag=0
     arr=[]
     i=0
@@ -130,27 +144,23 @@ def on_command_1(update: Update, context: CallbackContext):
         arr.append(val.value)
         i+=1
 
-    if flag:
-        message = update.message
+    user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
 
-        message.reply_text(
+    if flag:
+        update.effective_message.reply_html(
             f'Среднее USD за <b><u>неделю</u></b>: {float(sum(arr)) / max(len(arr), 1)}₽',
-            parse_mode=ParseMode.HTML,
-            reply_markup=ReplyKeyboardMarkup(COMMANDS, resize_keyboard=True)
+            reply_markup=keyboard_(0 if not user else user.get().is_active)
         )
     else:
-        message = update.message
-
-        message.reply_text(
+        update.effective_message.reply_html(
             'Бот ещё молодой и не имеет достаточно информации 😔',
-            parse_mode=ParseMode.HTML,
-            reply_markup=ReplyKeyboardMarkup(COMMANDS, resize_keyboard=True)
+            reply_markup=keyboard_(0 if not user else user.get().is_active)
         )
 
 
 @run_async
 @log_func(log)
-def on_command_2(update: Update, context: CallbackContext):
+def on_command_LAST_BY_MONTH(update: Update, context: CallbackContext):
     flag=0
     arr = []
     i = 0
@@ -161,32 +171,30 @@ def on_command_2(update: Update, context: CallbackContext):
             break
         arr.append(val.value)
         i += 1
-    if flag:
-        message = update.message
 
-        message.reply_text(
+    user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
+
+    if flag:
+        update.effective_message.reply_html(
             f'Среднее USD за <b><u>месяц</u></b>: {float(sum(arr)) / max(len(arr), 1)}₽',
-            parse_mode=ParseMode.HTML,
-            reply_markup=ReplyKeyboardMarkup(COMMANDS, resize_keyboard=True)
+            reply_markup=keyboard_(0 if not user else user.get().is_active)
         )
     else:
-        message = update.message
-
-        message.reply_text(
+        update.effective_message.reply_html(
             'Бот ещё молодой и не имеет достаточно информации 😔',
-            parse_mode=ParseMode.HTML,
-            reply_markup=ReplyKeyboardMarkup(COMMANDS, resize_keyboard=True)
+            reply_markup=keyboard_(0 if not user else user.get().is_active)
         )
 
 
 @run_async
 @log_func(log)
 def on_request(update: Update, context: CallbackContext):
-    message = update.effective_message
+    user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
 
-    text = message.text
-
-    message.reply_text(text)
+    update.effective_message.reply_html(
+        'Неизвестная команда 🤔',
+        reply_markup=keyboard_(0 if not user else user.get().is_active)
+    )
 
 
 def on_error(update: Update, context: CallbackContext):
@@ -213,11 +221,11 @@ def main():
     # Кнопки
     dp.add_handler(CommandHandler('start', on_start))
 
-    dp.add_handler(MessageHandler(Filters.text('Подписаться'), on_command_up))
-    dp.add_handler(MessageHandler(Filters.text('Отписаться'), on_command_up))
-    dp.add_handler(MessageHandler(Filters.text(COMMANDS[0][0]), on_command_0))
-    dp.add_handler(MessageHandler(Filters.text(COMMANDS[0][1]), on_command_1))
-    dp.add_handler(MessageHandler(Filters.text(COMMANDS[0][2]), on_command_2))
+    dp.add_handler(MessageHandler(Filters.text(COMMAND_SUBSCRIBE), on_command_SUBSCRIBE))
+    dp.add_handler(MessageHandler(Filters.text(COMMAND_UNSUBSCRIBE), on_command_UNSUBSCRIBE))
+    dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST), on_command_LAST))
+    dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_WEEK), on_command_LAST_BY_WEEK))
+    dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_MONTH), on_command_LAST_BY_MONTH))
     dp.add_handler(MessageHandler(Filters.text, on_request))
 
     dp.add_error_handler(on_error)
