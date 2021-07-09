@@ -2,7 +2,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__author__ = 'ipetrash'
+__author__ = 'SPridannikov'
 
 
 # SOURCE: http://docs.peewee-orm.com/en/latest/peewee/playhouse.html#schema-migrations
