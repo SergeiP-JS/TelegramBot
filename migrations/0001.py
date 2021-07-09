@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -9,6 +8,7 @@ __author__ = 'SPridannikov'
 
 
 from playhouse.migrate import *
+
 from db import DB_FILE_NAME
 
 

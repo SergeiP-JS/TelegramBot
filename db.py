@@ -3,9 +3,9 @@
 
 __author__ = 'SPridannikov'
 
+
 import datetime as DT
 import time
-
 from typing import Type
 
 # pip install peewee
@@ -17,6 +17,7 @@ from playhouse.sqliteq import SqliteQueueDatabase
 
 from config import DB_FILE_NAME
 from common import shorten
+
 
 # This working with multithreading
 # SOURCE: http://docs.peewee-orm.com/en/latest/peewee/playhouse.html#sqliteq
@@ -64,7 +65,6 @@ class BaseModel(Model):
         return self.__class__.__name__ + '(' + ', '.join(fields) + ')'
 
 
-
 class ExchangeRate(BaseModel):
     date = DateField(unique=True)
     value = DecimalField()
@@ -79,6 +79,7 @@ class Subscription(BaseModel):
 
 
 db.connect()
+
 db.create_tables([ExchangeRate, Subscription])
 
 # Задержка в 50мс, чтобы дать время на запуск SqliteQueueDatabase и создание таблиц
