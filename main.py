@@ -17,6 +17,7 @@ from telegram.ext.dispatcher import run_async
 import db
 from config import TOKEN
 from common import get_logger, log_func, reply_error
+from graph import create_graph
 from parser_exchange_rate import parse
 from run_check_subscriptions import check_
 
@@ -124,9 +125,11 @@ def on_command_LAST(update: Update, context: CallbackContext):
 @log_func(log)
 def on_command_LAST_BY_WEEK(update: Update, context: CallbackContext):
     user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
+    days=7
 
-    items = [x.value for x in db.ExchangeRate.get_last_by(days=7)]
-    if len(items)==7:
+    items = [x.value for x in db.ExchangeRate.get_last_by(days=days)]
+    if len(items)==days:
+        context.bot.send_photo(update.effective_chat.id, open(f'img/graph_{days}.png', 'rb'))
         update.effective_message.reply_html(
             f'Среднее USD за <b><u>неделю</u></b>: {float(sum(items)) / max(len(items), 1)}₽',
             reply_markup=keyboard_(False if not user else user.get().is_active)
@@ -142,9 +145,11 @@ def on_command_LAST_BY_WEEK(update: Update, context: CallbackContext):
 @log_func(log)
 def on_command_LAST_BY_MONTH(update: Update, context: CallbackContext):
     user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
+    days=30
 
-    items = [x.value for x in db.ExchangeRate.get_last_by(days=30)]
-    if len(items)==30:
+    items = [x.value for x in db.ExchangeRate.get_last_by(days=days)]
+    if len(items)==days:
+        context.bot.send_photo(update.effective_chat.id, open(f'img/graph_{days}.png', 'rb'))
         update.effective_message.reply_html(
             f'Среднее USD за <b><u>месяц</u></b>: {float(sum(items)) / max(len(items), 1)}₽',
             reply_markup=keyboard_(False if not user else user.get().is_active)
@@ -209,6 +214,15 @@ def main():
 def parse_():
     while True:
         parse()
+
+        items = [x.value for x in db.ExchangeRate.get_last_by(days=7)]
+        if len(items) == 7:
+            create_graph(7,items)
+
+        items = [x.value for x in db.ExchangeRate.get_last_by(days=30)]
+        if len(items) == 30:
+            create_graph(30, items)
+
         time.sleep(8*3600)
 
 

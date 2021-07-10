@@ -18,13 +18,13 @@ def check_(updater):
         # print(1)
         for s in db.Subscription.select():
             # print(s.chat_id, s.was_sending, s.is_active)
-            if s.was_sending == 0 and s.is_active:
+            if s.was_sending == False and s.is_active:
                 bot.send_message(s.chat_id,
                     f'Актуальный курс USD за <b><u>{db.ExchangeRate.get_last().date}</u></b>: '
                     f'{db.ExchangeRate.get_last().value}₽',
                     parse_mode=ParseMode.HTML)
 
-                s.was_sending = 1
+                s.was_sending = True
                 s.save()
 
         time.sleep(2)
