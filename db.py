@@ -6,7 +6,7 @@ __author__ = 'SPridannikov'
 
 import datetime as DT
 import time
-from typing import Type
+from typing import Type,List
 
 # pip install peewee
 from peewee import (
@@ -69,13 +69,29 @@ class ExchangeRate(BaseModel):
     date = DateField(unique=True)
     value = DecimalField()
 
+    @classmethod
+    def get_last(cls) -> 'ExchangeRate':
+        return cls.select().order_by(cls.id.desc()).first()
+
+    @classmethod
+    def get_last_by(cls, days: int) -> List['ExchangeRate']:
+        date = DT.datetime.now() - DT.timedelta(days=days)
+        return list(cls.select().where(date >= cls.date))
+
 
 class Subscription(BaseModel):
     chat_id = IntegerField(unique=True)
-    is_active = BooleanField()
-    was_sending = BooleanField()
+    is_active = BooleanField(default=True)
+    was_sending = BooleanField(default=False)
     creation_datetime = DateTimeField(default=DT.datetime.now)
     modification_datetime = DateTimeField(default=DT.datetime.now)
+
+    def set_active(self, active: bool):
+        self.is_active = active
+        if not active:
+            self.was_sending = False
+        self.modification_datetime = DT.datetime.now()
+        self.save()
 
 
 db.connect()
@@ -94,4 +110,6 @@ if __name__ == '__main__':
     # Subscription.truncate_table()
     for s in Subscription.select():
         print(s.id, s.chat_id, s.was_sending)
+    for s in ExchangeRate.select():
+        print(s.date, s.value)
 

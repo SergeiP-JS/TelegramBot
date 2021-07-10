@@ -20,21 +20,20 @@ def parse():
 
     for s in soup.find_all('valute'):
         if s.charcode.string == 'USD':
-            max_Exch_id = db.ExchangeRate.select().count()
 
             if not db.ExchangeRate.select().first():
                 db.ExchangeRate.create(date=soup.valcurs['date'], value=Decimal(s.value.string.replace(',', '.')))
                 print(s.charcode.string + " " + s.value.string)
 
                 for s in db.Subscription.select():
-                    s.was_sending = 0
+                    s.was_sending = False
                     s.save()
             else:
-                if db.ExchangeRate.get(db.ExchangeRate.id == max_Exch_id).date != soup.valcurs['date']:
+                if db.ExchangeRate.get_last().date != soup.valcurs['date']:
                     db.ExchangeRate.create(date=soup.valcurs['date'], value=Decimal(s.value.string.replace(',', '.')))
                     print(s.charcode.string + " " + s.value.string)
 
                     for s in db.Subscription.select():
-                            s.was_sending = 0
+                            s.was_sending = False
                             s.save()
             break

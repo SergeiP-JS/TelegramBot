@@ -20,8 +20,8 @@ def check_(updater):
             # print(s.chat_id, s.was_sending, s.is_active)
             if s.was_sending == 0 and s.is_active:
                 bot.send_message(s.chat_id,
-                    f'Актуальный курс USD за <b><u>{db.ExchangeRate.get(db.ExchangeRate.id == db.ExchangeRate.select().count()).date}</u></b>: '
-                    f'{db.ExchangeRate.get(db.ExchangeRate.id == db.ExchangeRate.select().count()).value}₽',
+                    f'Актуальный курс USD за <b><u>{db.ExchangeRate.get_last().date}</u></b>: '
+                    f'{db.ExchangeRate.get_last().value}₽',
                     parse_mode=ParseMode.HTML)
 
                 s.was_sending = 1
