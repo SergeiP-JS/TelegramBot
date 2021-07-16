@@ -1,10 +1,6 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-__author__ = 'SPridannikov'
-
-
+import datetime as DT
 from decimal import Decimal
+from typing import Tuple
 
 import requests
 from bs4 import BeautifulSoup
@@ -12,28 +8,30 @@ from bs4 import BeautifulSoup
 import db
 
 
-def parse():
-    url = 'https://www.cbr.ru/scripts/XML_daily.asp'  # url страницы
+def get_last_usd() -> Tuple[DT.date, Decimal]:
+    url = 'https://www.cbr.ru/scripts/XML_daily.asp'
 
-    r = requests.get(url)  # отправляем HTTP запрос и получаем результат
-    soup = BeautifulSoup(r.text, 'html.parser')
+    rs = requests.get(url)
+    soup = BeautifulSoup(rs.content, 'html.parser')
 
     for s in soup.find_all('valute'):
         if s.charcode.string == 'USD':
+            date = DT.datetime.strptime(
+                soup.valcurs['date'], '%d.%m.%Y'
+            )
+            return date.date(), Decimal(s.value.string.replace(',', '.'))
 
-            if not db.ExchangeRate.select().first():
-                db.ExchangeRate.create(date=soup.valcurs['date'], value=Decimal(s.value.string.replace(',', '.')))
-                print(s.charcode.string + " " + s.value.string)
+    raise Exception('Не удалось найти значение USD!')
 
-                for s in db.Subscription.select():
-                    s.was_sending = False
-                    s.save()
-            else:
-                if db.ExchangeRate.get_last().date != soup.valcurs['date']:
-                    db.ExchangeRate.create(date=soup.valcurs['date'], value=Decimal(s.value.string.replace(',', '.')))
-                    print(s.charcode.string + " " + s.value.string)
 
-                    for s in db.Subscription.select():
-                            s.was_sending = False
-                            s.save()
-            break
+def parse():
+    date, value = get_last_usd()
+
+    exchange_rate = db.ExchangeRate.get_or_none(db.ExchangeRate.date == date)
+    if not exchange_rate:
+        db.ExchangeRate.create(date=date, value=value)
+        print(f'Добавлено: {date:%d.%m.%Y} = {value}')
+
+        for s in db.Subscription.select():
+            s.was_sending = False
+            s.save()
