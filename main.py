@@ -19,7 +19,7 @@ from config import TOKEN
 from common import get_logger, log_func, reply_error
 from graph import create_graph
 from parser_exchange_rate import parse
-from run_check_subscriptions import check_
+from run_check_subscriptions import check
 
 
 log = get_logger(__file__)
@@ -189,7 +189,7 @@ def main():
         use_context=True
     )
 
-    Thread(target=check_,args=(updater,)).start()
+    Thread(target=check, args=[updater.bot]).start()
 
     dp = updater.dispatcher
 

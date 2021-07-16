@@ -11,20 +11,18 @@ from telegram import Bot, ParseMode
 import db
 
 
-def check_(updater):
-    bot: Bot = updater.bot
-
+def check(bot: Bot):
     while True:
-        # print(1)
-        for s in db.Subscription.select():
-            # print(s.chat_id, s.was_sending, s.is_active)
-            if s.was_sending == False and s.is_active:
-                bot.send_message(s.chat_id,
-                    f'Актуальный курс USD за <b><u>{db.ExchangeRate.get_last().date}</u></b>: '
-                    f'{db.ExchangeRate.get_last().value}₽',
-                    parse_mode=ParseMode.HTML)
+        for s in db.Subscription.get_active_unsent_subscriptions():
+            rate = db.ExchangeRate.get_last()
 
-                s.was_sending = True
-                s.save()
+            bot.send_message(
+                s.chat_id,
+                f'Актуальный курс USD за <b><u>{rate.date}</u></b>: {rate.value}₽',
+                parse_mode=ParseMode.HTML
+             )
+
+            s.was_sending = True
+            s.save()
 
         time.sleep(2)

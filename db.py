@@ -76,7 +76,7 @@ class ExchangeRate(BaseModel):
     @classmethod
     def get_last_by(cls, days: int) -> List['ExchangeRate']:
         date = DT.datetime.now() - DT.timedelta(days=days)
-        return list(cls.select().where(date >= cls.date))
+        return list(cls.select().where(date <= cls.date))
 
 
 class Subscription(BaseModel):
@@ -85,6 +85,10 @@ class Subscription(BaseModel):
     was_sending = BooleanField(default=False)
     creation_datetime = DateTimeField(default=DT.datetime.now)
     modification_datetime = DateTimeField(default=DT.datetime.now)
+
+    @classmethod
+    def get_active_unsent_subscriptions(cls) -> List['Subscription']:
+        return cls.select().where(cls.was_sending == False, cls.is_active == True)
 
     def set_active(self, active: bool):
         self.is_active = active
