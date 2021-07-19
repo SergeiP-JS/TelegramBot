@@ -12,7 +12,6 @@ from threading import Thread
 # pip install python-telegram-bot
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext
-from telegram.ext.dispatcher import run_async
 
 import db
 from config import TOKEN
@@ -41,7 +40,6 @@ def keyboard_(is_active):
     return ReplyKeyboardMarkup(COMMANDS, resize_keyboard=True)
 
 
-@run_async
 @log_func(log)
 def on_start(update: Update, context: CallbackContext):
     user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
@@ -54,7 +52,6 @@ def on_start(update: Update, context: CallbackContext):
     )
 
 
-@run_async
 @log_func(log)
 def on_command_SUBSCRIBE(update: Update, context: CallbackContext):
     message = update.effective_message
@@ -79,7 +76,6 @@ def on_command_SUBSCRIBE(update: Update, context: CallbackContext):
     )
 
 
-@run_async
 @log_func(log)
 def on_command_UNSUBSCRIBE(update: Update, context: CallbackContext):
     message = update.effective_message
@@ -103,7 +99,6 @@ def on_command_UNSUBSCRIBE(update: Update, context: CallbackContext):
     )
 
 
-@run_async
 @log_func(log)
 def on_command_LAST(update: Update, context: CallbackContext):
     user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
@@ -116,12 +111,11 @@ def on_command_LAST(update: Update, context: CallbackContext):
         )
     else:
         update.effective_message.reply_html(
-            'Бот ещё молодой и не имеет достаточно информации 😔',
+            'Бот не имеет достаточно информации 😔',
             reply_markup=keyboard_(False if not user else user.get().is_active)
         )
 
 
-@run_async
 @log_func(log)
 def on_command_LAST_BY_WEEK(update: Update, context: CallbackContext):
     user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
@@ -136,12 +130,11 @@ def on_command_LAST_BY_WEEK(update: Update, context: CallbackContext):
         )
     else:
         update.effective_message.reply_html(
-            'Бот ещё молодой и не имеет достаточно информации 😔',
+            'Бот не имеет достаточно информации 😔',
             reply_markup=keyboard_(False if not user else user.get().is_active)
         )
 
 
-@run_async
 @log_func(log)
 def on_command_LAST_BY_MONTH(update: Update, context: CallbackContext):
     user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
@@ -156,12 +149,11 @@ def on_command_LAST_BY_MONTH(update: Update, context: CallbackContext):
         )
     else:
         update.effective_message.reply_html(
-            'Бот ещё молодой и не имеет достаточно информации 😔',
+            'Бот имеет достаточно информации 😔',
             reply_markup=keyboard_(False if not user else user.get().is_active)
         )
 
 
-@run_async
 @log_func(log)
 def on_request(update: Update, context: CallbackContext):
     user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
@@ -196,12 +188,12 @@ def main():
     # Кнопки
     dp.add_handler(CommandHandler('start', on_start))
 
-    dp.add_handler(MessageHandler(Filters.text(COMMAND_SUBSCRIBE), on_command_SUBSCRIBE))
-    dp.add_handler(MessageHandler(Filters.text(COMMAND_UNSUBSCRIBE), on_command_UNSUBSCRIBE))
-    dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST), on_command_LAST))
-    dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_WEEK), on_command_LAST_BY_WEEK))
-    dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_MONTH), on_command_LAST_BY_MONTH))
-    dp.add_handler(MessageHandler(Filters.text, on_request))
+    dp.add_handler(MessageHandler(Filters.text(COMMAND_SUBSCRIBE), on_command_SUBSCRIBE,run_async=True))
+    dp.add_handler(MessageHandler(Filters.text(COMMAND_UNSUBSCRIBE), on_command_UNSUBSCRIBE,run_async=True))
+    dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST), on_command_LAST,run_async=True))
+    dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_WEEK), on_command_LAST_BY_WEEK,run_async=True))
+    dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_MONTH), on_command_LAST_BY_MONTH,run_async=True))
+    dp.add_handler(MessageHandler(Filters.text, on_request,run_async=True))
 
     dp.add_error_handler(on_error)
 
