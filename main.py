@@ -203,7 +203,7 @@ def main():
     log.debug('Finish')
 
 
-def parse_():
+def loop_parse_and_check_graph():
     while True:
         parse()
 
@@ -220,7 +220,7 @@ def parse_():
 
 if __name__ == '__main__':
      # asyncio.run(async_())
-     Thread(target=parse_).start()
+     Thread(target=loop_parse_and_check_graph).start()
      #
      while True:
          try:
