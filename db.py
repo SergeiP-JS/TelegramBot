@@ -90,6 +90,10 @@ class Subscription(BaseModel):
     def get_active_unsent_subscriptions(cls) -> List['Subscription']:
         return cls.select().where(cls.was_sending == False, cls.is_active == True)
 
+    @classmethod
+    def get_is_active(cls,chat_id) -> 'Subscription':
+        return cls.get_or_none(cls.chat_id == chat_id,cls.is_active)
+
     def set_active(self, active: bool):
         self.is_active = active
         if not active:
@@ -121,4 +125,6 @@ if __name__ == '__main__':
 
     print(ExchangeRate.select().first().date.strftime('%d.%m.%Y'))
     print(ExchangeRate.get_last().date.strftime('%d.%m.%Y'))
+
+    print(Subscription.get_is_active(973083137))
 

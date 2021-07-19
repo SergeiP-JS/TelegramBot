@@ -33,39 +33,39 @@ COMMAND_LAST_BY_MONTH = 'За месяц'
 FILTER_BY_ADMIN=Filters.user(username=ADMIN_USERNAME)
 
 
-def keyboard_(is_active):
-    if is_active:
-        COMMANDS = [[COMMAND_LAST, COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH], [COMMAND_UNSUBSCRIBE]]
-    else:
-        COMMANDS = [[COMMAND_LAST, COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH], [COMMAND_SUBSCRIBE]]
+def get_keyboard(update):
+    is_active=db.Subscription.get_is_active(update.effective_chat.id)
 
-    return ReplyKeyboardMarkup(COMMANDS, resize_keyboard=True)
+    commands = [
+        [COMMAND_LAST, COMMAND_LAST_BY_WEEK, COMMAND_LAST_BY_MONTH],
+        [COMMAND_UNSUBSCRIBE if is_active else COMMAND_SUBSCRIBE]
+    ]
+    return ReplyKeyboardMarkup(commands, resize_keyboard=True)
 
 
 @log_func(log)
 def on_start(update: Update, context: CallbackContext):
-    user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
-
     update.effective_message.reply_html(
         f'Приветсвую {update.effective_user.first_name} 🙂\n'
         'Данный бот способен отслеживать USD валюту и отправлять вам уведомление при изменении 💲.\n'
         'С помощью меню вы можете подписаться/отписаться от рассылки, узнать актуальный курс за день, неделю или месяц.',
-        reply_markup=keyboard_(False if not user else user.get().is_active)
+        reply_markup=get_keyboard(update)
     )
 
 
 @log_func(log)
 def on_get_admin_stats(update: Update, context: CallbackContext):
-    user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
-
+    currency_count=db.ExchangeRate.select().count()
     first_date=db.ExchangeRate.select().first().date.strftime('%d.%m.%Y')
     last_date=db.ExchangeRate.get_last().date.strftime('%d.%m.%Y')
 
+    subscription_active_count=db.Subscription.select().where(db.Subscription.is_active == True).count()
+
     update.effective_message.reply_html(
         f'<b>Статистика админа</b>\n\n'
-        f'<b>Курсы валют</b>\nКоличество: <b><u>{db.ExchangeRate.select().count()}</u></b>\nДиапазон значений: <b><u>{first_date} - {last_date}</u></b>\n\n'
-        f'<b>Подписки</b>\nКоличество активных: <b><u>{db.Subscription.select().where(db.Subscription.is_active == True).count()}</u></b>',
-        reply_markup=keyboard_(False if not user else user.get().is_active)
+        f'<b>Курсы валют</b>\nКоличество: <b><u>{currency_count}</u></b>\nДиапазон значений: <b><u>{first_date} - {last_date}</u></b>\n\n'
+        f'<b>Подписки</b>\nКоличество активных: <b><u>{subscription_active_count}</u></b>',
+        reply_markup=get_keyboard(update)
     )
 
 
@@ -89,7 +89,7 @@ def on_command_SUBSCRIBE(update: Update, context: CallbackContext):
 
     message.reply_html(
         message.text,
-        reply_markup=keyboard_(user.get().is_active)
+        reply_markup=get_keyboard(update)
     )
 
 
@@ -98,44 +98,38 @@ def on_command_UNSUBSCRIBE(update: Update, context: CallbackContext):
     message = update.effective_message
     # print(message.text)
 
-    user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
+    user=db.Subscription.get_is_active(update.effective_chat.id)
 
-    if not user:
-        message.text = "Подписка не оформлена 🤔"
+    if user:
+        db.Subscription.set_active(user, False)
+
+        message.text = "Вы успешно отписались 😔"
     else:
-        if not user.get().is_active:
-            message.text = "Подписка не оформлена 🤔"
-        else:
-            db.Subscription.set_active(user.get(),False)
-
-            message.text = "Вы успешно отписались 😔"
+        message.text = "Подписка не оформлена 🤔"
 
     message.reply_html(
         message.text,
-        reply_markup=keyboard_(False if not user else user.get().is_active)
+        reply_markup=get_keyboard(update)
     )
 
 
 @log_func(log)
 def on_command_LAST(update: Update, context: CallbackContext):
-    user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
-
     if db.ExchangeRate.select().first():
         update.effective_message.reply_html(
             f'Актуальный курс USD за <b><u>{db.ExchangeRate.get_last().date}</u></b>: '
             f'{db.ExchangeRate.get_last().value}₽',
-            reply_markup=keyboard_(False if not user else user.get().is_active)
+            reply_markup=get_keyboard(update)
         )
     else:
         update.effective_message.reply_html(
             'Бот не имеет достаточно информации 😔',
-            reply_markup=keyboard_(False if not user else user.get().is_active)
+            reply_markup=get_keyboard(update)
         )
 
 
 @log_func(log)
 def on_command_LAST_BY_WEEK(update: Update, context: CallbackContext):
-    user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
     days=7
 
     items = [x.value for x in db.ExchangeRate.get_last_by(days=days)]
@@ -143,18 +137,17 @@ def on_command_LAST_BY_WEEK(update: Update, context: CallbackContext):
         context.bot.send_photo(update.effective_chat.id, open(f'img/graph_{days}.png', 'rb'))
         update.effective_message.reply_html(
             f'Среднее USD за <b><u>неделю</u></b>: {float(sum(items)) / max(len(items), 1)}₽',
-            reply_markup=keyboard_(False if not user else user.get().is_active)
+            reply_markup=get_keyboard(update)
         )
     else:
         update.effective_message.reply_html(
             'Бот не имеет достаточно информации 😔',
-            reply_markup=keyboard_(False if not user else user.get().is_active)
+            reply_markup=get_keyboard(update)
         )
 
 
 @log_func(log)
 def on_command_LAST_BY_MONTH(update: Update, context: CallbackContext):
-    user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
     days=30
 
     items = [x.value for x in db.ExchangeRate.get_last_by(days=days)]
@@ -162,22 +155,20 @@ def on_command_LAST_BY_MONTH(update: Update, context: CallbackContext):
         context.bot.send_photo(update.effective_chat.id, open(f'img/graph_{days}.png', 'rb'))
         update.effective_message.reply_html(
             f'Среднее USD за <b><u>месяц</u></b>: {float(sum(items)) / max(len(items), 1)}₽',
-            reply_markup=keyboard_(False if not user else user.get().is_active)
+            reply_markup=get_keyboard(update)
         )
     else:
         update.effective_message.reply_html(
             'Бот имеет достаточно информации 😔',
-            reply_markup=keyboard_(False if not user else user.get().is_active)
+            reply_markup=get_keyboard(update)
         )
 
 
 @log_func(log)
 def on_request(update: Update, context: CallbackContext):
-    user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
-
     update.effective_message.reply_html(
         'Неизвестная команда 🤔',
-        reply_markup=keyboard_(False if not user else user.get().is_active)
+        reply_markup=get_keyboard(update)
     )
 
 
