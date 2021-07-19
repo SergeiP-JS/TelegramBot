@@ -24,6 +24,8 @@ except:
     TOKEN_FILE_NAME.touch()
     sys.exit()
 
+ADMIN_USERNAME='Rusich_As'
+
 ERROR_TEXT = '⚠ Возникла какая-то проблема. Попробуйте повторить запрос или попробовать чуть позже...'
 
 # Создание папки для базы данных

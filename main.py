@@ -14,7 +14,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext
 
 import db
-from config import TOKEN
+from config import TOKEN, ADMIN_USERNAME
 from common import get_logger, log_func, reply_error
 from graph import create_graph
 from parser_exchange_rate import parse
@@ -29,6 +29,8 @@ COMMAND_UNSUBSCRIBE = 'Отписаться'
 COMMAND_LAST = 'Последнее значение'
 COMMAND_LAST_BY_WEEK = 'За неделю'
 COMMAND_LAST_BY_MONTH = 'За месяц'
+
+FILTER_BY_ADMIN=Filters.user(username=ADMIN_USERNAME)
 
 
 def keyboard_(is_active):
@@ -48,6 +50,21 @@ def on_start(update: Update, context: CallbackContext):
         f'Приветсвую {update.effective_user.first_name} 🙂\n'
         'Данный бот способен отслеживать USD валюту и отправлять вам уведомление при изменении 💲.\n'
         'С помощью меню вы можете подписаться/отписаться от рассылки, узнать актуальный курс за день, неделю или месяц.',
+        reply_markup=keyboard_(False if not user else user.get().is_active)
+    )
+
+
+@log_func(log)
+def on_get_admin_stats(update: Update, context: CallbackContext):
+    user = db.Subscription.select().where(db.Subscription.chat_id == update.effective_chat.id)
+
+    first_date=db.ExchangeRate.select().first().date.strftime('%d.%m.%Y')
+    last_date=db.ExchangeRate.get_last().date.strftime('%d.%m.%Y')
+
+    update.effective_message.reply_html(
+        f'<b>Статистика админа</b>\n\n'
+        f'<b>Курсы валют</b>\nКоличество: <b><u>{db.ExchangeRate.select().count()}</u></b>\nДиапазон значений: <b><u>{first_date} - {last_date}</u></b>\n\n'
+        f'<b>Подписки</b>\nКоличество активных: <b><u>{db.Subscription.select().where(db.Subscription.is_active == True).count()}</u></b>',
         reply_markup=keyboard_(False if not user else user.get().is_active)
     )
 
@@ -186,13 +203,15 @@ def main():
     dp = updater.dispatcher
 
     # Кнопки
-    dp.add_handler(CommandHandler('start', on_start))
+    dp.add_handler(CommandHandler('start', on_start,run_async=True))
+    dp.add_handler(CommandHandler('admin_stats', on_get_admin_stats, FILTER_BY_ADMIN,run_async=True))
 
     dp.add_handler(MessageHandler(Filters.text(COMMAND_SUBSCRIBE), on_command_SUBSCRIBE,run_async=True))
     dp.add_handler(MessageHandler(Filters.text(COMMAND_UNSUBSCRIBE), on_command_UNSUBSCRIBE,run_async=True))
     dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST), on_command_LAST,run_async=True))
     dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_WEEK), on_command_LAST_BY_WEEK,run_async=True))
     dp.add_handler(MessageHandler(Filters.text(COMMAND_LAST_BY_MONTH), on_command_LAST_BY_MONTH,run_async=True))
+    dp.add_handler(MessageHandler(Filters.text('Статистика админа') and FILTER_BY_ADMIN, on_get_admin_stats, run_async=True))
     dp.add_handler(MessageHandler(Filters.text, on_request,run_async=True))
 
     dp.add_error_handler(on_error)

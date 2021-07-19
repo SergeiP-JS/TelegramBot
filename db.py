@@ -117,3 +117,8 @@ if __name__ == '__main__':
     for s in ExchangeRate.select():
         print(s.date, s.value)
 
+    print(Subscription.select().where(Subscription.is_active == True).count())
+
+    print(ExchangeRate.select().first().date.strftime('%d.%m.%Y'))
+    print(ExchangeRate.get_last().date.strftime('%d.%m.%Y'))
+
