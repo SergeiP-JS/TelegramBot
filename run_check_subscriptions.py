@@ -18,7 +18,7 @@ def check(bot: Bot):
 
             bot.send_message(
                 s.chat_id,
-                f'Актуальный курс USD за <b><u>{rate.date}</u></b>: {rate.value}₽',
+                f'Актуальный курс USD за <b><u>{rate.date:%d.%m.%Y}</u></b>: {rate.value}₽',
                 parse_mode=ParseMode.HTML
              )
 
