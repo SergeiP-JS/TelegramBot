@@ -76,7 +76,7 @@ class ExchangeRate(BaseModel):
     @classmethod
     def get_last_by(cls, days: int) -> List['ExchangeRate']:
         date = DT.datetime.now() - DT.timedelta(days=days)
-        return list(cls.select().where(date <= cls.date))
+        return list(cls.select().where(cls.date >= date))
 
 
 class Subscription(BaseModel):
