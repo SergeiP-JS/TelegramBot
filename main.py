@@ -117,7 +117,7 @@ def on_command_UNSUBSCRIBE(update: Update, context: CallbackContext):
 def on_command_LAST(update: Update, context: CallbackContext):
     if db.ExchangeRate.select().first():
         update.effective_message.reply_html(
-            f'Актуальный курс USD за <b><u>{db.ExchangeRate.get_last().date}</u></b>: '
+            f'Актуальный курс USD за <b><u>{db.ExchangeRate.get_last().date:%d.%m.%Y}</u></b>: '
             f'{db.ExchangeRate.get_last().value}₽',
             reply_markup=get_keyboard(update)
         )
