@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+__author__ = 'SPridannikov'
+
+
 import datetime as DT
 from decimal import Decimal
 from typing import Tuple
