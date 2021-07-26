@@ -26,6 +26,9 @@ except:
 
 ADMIN_USERNAME='Rusich_As'
 
+PATH_GRAPH_WEEK = 'img/graph_week.png'
+PATH_GRAPH_MONTH = 'img/graph_month.png'
+
 ERROR_TEXT = '⚠ Возникла какая-то проблема. Попробуйте повторить запрос или попробовать чуть позже...'
 
 # Создание папки для базы данных
