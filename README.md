@@ -10,3 +10,4 @@
 + pip install bs4
 + pip install peewee
 + pip install python-telegram-bot
++ pip install matplotlib
