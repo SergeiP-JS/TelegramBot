@@ -1,5 +1,10 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+__author__ = 'SPridannikov'
+
+
 import os
-import time
 from typing import List
 
 import matplotlib.pyplot as plt
@@ -21,7 +26,7 @@ def create_graph(items: List[db.ExchangeRate],path_graph):
 
 
 if __name__ == '__main__':
-    items1 = db.ExchangeRate.get_last_by(days=30)
-    create_graph(items1,'img/graph_s2.png')
-    items2 = db.ExchangeRate.get_last_by(days=7)
-    create_graph(items2, 'img/graph_s1.png')
+    items = db.ExchangeRate.get_last_by(days=30)
+    create_graph(items,'img/graph_s2.png')
+    items = db.ExchangeRate.get_last_by(days=7)
+    create_graph(items, 'img/graph_s1.png')
