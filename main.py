@@ -153,7 +153,7 @@ def on_command_LAST_BY_MONTH(update: Update, context: CallbackContext):
     message = update.effective_message
 
     items = [x.value for x in db.ExchangeRate.get_last_by(days=30)]
-    if len(items)==30:
+    if items:
         message.reply_photo(
             open(PATH_GRAPH_MONTH , 'rb'),
             f'Среднее USD за <b><u>месяц</u></b>: {sum(items) / len(items):.2f}₽',
@@ -221,11 +221,10 @@ def loop_parse_and_check_graph():
         parse()
 
         items = db.ExchangeRate.get_last_by(days=7)
-        create_graph(items)
+        create_graph(items,PATH_GRAPH_WEEK)
 
         items = db.ExchangeRate.get_last_by(days=30)
-        if len(items) == 30:
-            create_graph(items)
+        create_graph(items,PATH_GRAPH_MONTH)
 
         time.sleep(8*3600)
 
