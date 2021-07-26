@@ -10,11 +10,11 @@ import time
 from threading import Thread
 
 # pip install python-telegram-bot
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup, ParseMode
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, CallbackContext
 
 import db
-from config import TOKEN, ADMIN_USERNAME
+from config import TOKEN, ADMIN_USERNAME, PATH_GRAPH_WEEK,PATH_GRAPH_MONTH
 from common import get_logger, log_func, reply_error
 from graph import create_graph
 from parser_exchange_rate import parse
@@ -130,36 +130,39 @@ def on_command_LAST(update: Update, context: CallbackContext):
 
 @log_func(log)
 def on_command_LAST_BY_WEEK(update: Update, context: CallbackContext):
-    days=7
+    message = update.effective_message
 
-    items = [x.value for x in db.ExchangeRate.get_last_by(days=days)]
-    if len(items)==days:
-        context.bot.send_photo(update.effective_chat.id, open(f'img/graph_{days}.png', 'rb'))
-        update.effective_message.reply_html(
-            f'Среднее USD за <b><u>неделю</u></b>: {float(sum(items)) / max(len(items), 1)}₽',
+    items = [x.value for x in db.ExchangeRate.get_last_by(days=7)]
+    if items:
+        message.reply_photo(
+            open(PATH_GRAPH_WEEK , 'rb'),
+            f'Среднее USD за <b><u>неделю</u></b>: {sum(items) / len(items):.2f}₽',
+            parse_mode=ParseMode.HTML,
             reply_markup=get_keyboard(update)
         )
     else:
-        update.effective_message.reply_html(
+        message.reply_html(
             'Бот не имеет достаточно информации 😔',
             reply_markup=get_keyboard(update)
         )
 
 
+
 @log_func(log)
 def on_command_LAST_BY_MONTH(update: Update, context: CallbackContext):
-    days=30
+    message = update.effective_message
 
-    items = [x.value for x in db.ExchangeRate.get_last_by(days=days)]
-    if len(items)==days:
-        context.bot.send_photo(update.effective_chat.id, open(f'img/graph_{days}.png', 'rb'))
-        update.effective_message.reply_html(
-            f'Среднее USD за <b><u>месяц</u></b>: {float(sum(items)) / max(len(items), 1)}₽',
+    items = [x.value for x in db.ExchangeRate.get_last_by(days=30)]
+    if len(items)==30:
+        message.reply_photo(
+            open(PATH_GRAPH_MONTH , 'rb'),
+            f'Среднее USD за <b><u>месяц</u></b>: {sum(items) / len(items):.2f}₽',
+            parse_mode=ParseMode.HTML,
             reply_markup=get_keyboard(update)
         )
     else:
-        update.effective_message.reply_html(
-            'Бот имеет достаточно информации 😔',
+        message.reply_html(
+            'Бот не имеет достаточно информации 😔',
             reply_markup=get_keyboard(update)
         )
 
@@ -217,13 +220,12 @@ def loop_parse_and_check_graph():
     while True:
         parse()
 
-        items = [x.value for x in db.ExchangeRate.get_last_by(days=7)]
-        if len(items) == 7:
-            create_graph(7,items)
+        items = db.ExchangeRate.get_last_by(days=7)
+        create_graph(items)
 
-        items = [x.value for x in db.ExchangeRate.get_last_by(days=30)]
+        items = db.ExchangeRate.get_last_by(days=30)
         if len(items) == 30:
-            create_graph(30, items)
+            create_graph(items)
 
         time.sleep(8*3600)
 
